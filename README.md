@@ -28,3 +28,7 @@ To get started with tornadolite, clone the repository and install dependencies:
 git clone https://github.com/zekele-win/tornadolite.git
 cd tornadolite
 npm install
+
+## License
+
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
