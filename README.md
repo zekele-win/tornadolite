@@ -1,4 +1,6 @@
-# zkvault-basic
+<!-- English | [简体中文](./README.zh-CN.md) -->
+
+# ❄️ zkvault-basic
 
 **zkvault-basic** is a minimal, functional zero-knowledge proof project based on zkSNARKs, designed to help developers understand the fundamental workflow of zk applications—including circuit writing, proof generation, and smart contract verification.
 
