@@ -187,7 +187,7 @@ npm run cli -- withdraw --secret <your-secret>
 
 ## 🚧 Next Steps
 
-Upgrade to `zkvault-merkle` by implementing a Merkle Tree to fully decouple deposit and withdrawal addresses.
+Upgrade to `zkvault-classic` by implementing a Merkle Tree to fully decouple deposit and withdrawal addresses.
 
 ---
 

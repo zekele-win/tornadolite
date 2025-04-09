@@ -185,7 +185,7 @@ npm run cli -- withdraw --secret <your-secret>
 
 ## 🚧 下一阶段计划
 
-基于 merkle tree 实现升级版 zkvault-merkle，完整断开借款和取款的地址关联。
+基于 merkle tree 实现升级版 zkvault-classic，完整断开借款和取款的地址关联。
 
 ---
 
