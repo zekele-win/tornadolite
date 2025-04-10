@@ -5,19 +5,32 @@ import path from "path";
 import fs from "fs";
 import { BytesLike, ethers } from "ethers";
 
+/**
+ * Generates a wallet from the given mnemonic and derivation index.
+ * @param mnemonic The mnemonic phrase.
+ * @param index The wallet index in the HD derivation path.
+ * @param provider An ethers JsonRpcProvider instance.
+ * @returns A Wallet instance connected to the provider.
+ */
 function generateWallet(
   mnemonic: string,
   index: number,
   provider: ethers.JsonRpcProvider
 ): ethers.Wallet {
-  const hdAallet = ethers.HDNodeWallet.fromPhrase(
+  const hdWallet = ethers.HDNodeWallet.fromPhrase(
     mnemonic,
     undefined,
     `m/44'/60'/0'/0/${index}`
   );
-  return new ethers.Wallet(hdAallet.privateKey, provider);
+  return new ethers.Wallet(hdWallet.privateKey, provider);
 }
 
+/**
+ * Loads the ABI and bytecode from compiled contract artifacts.
+ * @param fileName The Solidity source file name (without extension).
+ * @param contractName The name of the contract.
+ * @returns An object containing the contract ABI and bytecode.
+ */
 function getContractInfo(fileName: string, contractName: string): any {
   const filePath = path.join(
     __dirname,
@@ -30,6 +43,14 @@ function getContractInfo(fileName: string, contractName: string): any {
   };
 }
 
+/**
+ * Deploys a contract using the provided wallet, ABI, and bytecode.
+ * @param wallet The deployer's Wallet instance.
+ * @param abi The contract's ABI.
+ * @param bytecode The contract's bytecode.
+ * @param args The constructor arguments for the contract.
+ * @returns A deployed BaseContract instance.
+ */
 async function deployContract(
   wallet: ethers.Wallet,
   abi: any[],
@@ -50,6 +71,13 @@ async function deployContract(
   return contract;
 }
 
+/**
+ * Saves deployment metadata to a JSON file.
+ * @param network The network name (e.g., "mainnet", "sepolia", "test").
+ * @param name The contract name.
+ * @param contractAddress The deployed contract address.
+ * @param deployerAddress The address that deployed the contract.
+ */
 function saveDeployment(
   network: string,
   name: string,
@@ -70,12 +98,21 @@ function saveDeployment(
   fs.writeFileSync(filePath, JSON.stringify(deployment, null, 2));
 }
 
+/**
+ * Saves the contract ABI to a local file.
+ * @param name The contract name.
+ * @param abi The contract ABI.
+ */
 function saveAbi(name: string, abi: any[]) {
   const filePath = path.join(__dirname, `../artifacts/abis/${name}.json`);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(abi, null, 2));
 }
 
+/**
+ * Deploys the verifier contract and the vault contract, and saves metadata.
+ * @param denomination The fixed ETH deposit amount for the vault, as a string.
+ */
 async function deploy(denomination: string) {
   console.log({ denomination });
 
@@ -88,6 +125,7 @@ async function deploy(denomination: string) {
   const wallet = generateWallet(mnemonic, 0, provider);
   console.log({ wallet });
 
+  // Deploy verifier contract
   const { abi: verifierContractAbi, bytecode: verifierContractBytecode } =
     getContractInfo("ZkVaultBasicVerifier", "Groth16Verifier");
   const verifierContract = await deployContract(
@@ -98,6 +136,7 @@ async function deploy(denomination: string) {
   const verifierContractAddress = verifierContract.target as string;
   console.log({ verifierContractAddress });
 
+  // Deploy vault contract with the verifier address and denomination
   const { abi: vaultContractAbi, bytecode: vaultContractBytecode } =
     getContractInfo("ZkVaultBasic", "ZkVaultBasic");
   const vaultContract = await deployContract(
@@ -110,6 +149,7 @@ async function deploy(denomination: string) {
   const vaultContractAddress = vaultContract.target as string;
   console.log({ vaultContractAddress });
 
+  // Save contract info
   saveDeployment(
     network,
     "ZkVaultBasicVerifier",
@@ -117,11 +157,24 @@ async function deploy(denomination: string) {
     wallet.address
   );
   saveDeployment(network, "ZkVaultBasic", vaultContractAddress, wallet.address);
-
   saveAbi("ZkVaultBasicVerifier", verifierContractAbi);
   saveAbi("ZkVaultBasic", vaultContractAbi);
+
+  console.log(
+    `Deploy successful with: ${JSON.stringify(
+      {
+        address: verifierContractAddress,
+        deployer: wallet.address,
+      },
+      null,
+      2
+    )}`
+  );
 }
 
+/**
+ * Entry point using Commander to parse options.
+ */
 async function main() {
   program
     .description("zkvault-basic deployer.")
