@@ -3,13 +3,20 @@ import dotenv from "dotenv";
 dotenv.config();
 import path from "path";
 import fs from "fs";
-import { BytesLike, ethers } from "ethers";
+import { ethers } from "ethers";
 import crypto from "crypto";
 import { utils as ffutils } from "ffjavascript";
 import * as snarkjs from "snarkjs";
-import { to as toHex } from "../utils/hex";
-import { hash as pedersenHash } from "../utils/pedersen";
+import * as hex from "../utils/hex";
+import * as pedersen from "../utils/pedersen";
 
+/**
+ * Generates a wallet from the given mnemonic and derivation index.
+ * @param mnemonic The mnemonic phrase.
+ * @param index The wallet index in the HD derivation path.
+ * @param provider An ethers JsonRpcProvider instance.
+ * @returns A Wallet instance connected to the provider.
+ */
 function generateWallet(
   mnemonic: string,
   index: number,
@@ -23,22 +30,52 @@ function generateWallet(
   return new ethers.Wallet(hdAallet.privateKey, provider);
 }
 
+/**
+ * Retrieves the deployed vault contract address for a specific network.
+ * @param network The target network name (e.g., "mainnet", "sepolia", "test").
+ * @returns The deployed contract address.
+ */
 function getVaultContractAddress(network: string): string {
   const filePath = path.join(
     __dirname,
     `../artifacts/deployments/${network}/ZkVaultBasic.json`
   );
-
   const deployment = JSON.parse(fs.readFileSync(filePath, "utf8"));
   return deployment.address;
 }
 
+/**
+ * Loads the ABI for the ZkVaultBasic contract.
+ * @returns The contract ABI array.
+ */
 function getVaultContractAbi(): any[] {
   const filePath = path.join(__dirname, `../artifacts/abis/ZkVaultBasic.json`);
-
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+/**
+ * Prints the ETH balances of specified wallet addresses.
+ * @param tag A label for the current balance snapshot (e.g., "Before deposit").
+ * @param provider An ethers.js provider.
+ * @param wallets A record of label => address.
+ */
+async function printBalances(
+  tag: string,
+  provider: ethers.JsonRpcProvider,
+  wallets: Record<string, string>
+) {
+  console.log(`[${tag}]`);
+  for (const [label, address] of Object.entries(wallets)) {
+    const balance = await provider.getBalance(address);
+    console.log(`${label}: ${ethers.formatEther(balance)} ETH`);
+  }
+}
+
+/**
+ * Executes the deposit operation into the zkVault contract.
+ * Generates a random secret, computes a Pedersen commitment,
+ * and sends ETH into the vault with that commitment.
+ */
 async function deposit() {
   const network = process.env.NETWORK as string;
   const nodeUrl = process.env.NODE_URL as string;
@@ -55,28 +92,26 @@ async function deposit() {
     depositWallet
   );
 
-  // Check balance of wallet and contract before.
-  console.log({
-    depositWalletBlanceBefore: await provider.getBalance(depositWallet.address),
-    vaultContractBlanceBefore: await provider.getBalance(
-      await vaultContract.getAddress()
-    ),
-  });
-
-  // Generate secret.
+  // Generate a 31-byte random secret as bigint
   const secret = ffutils.leBuff2int(crypto.randomBytes(31));
   console.log({ secret });
 
-  // Calculate commitment.
-  const commitment = await pedersenHash(secret);
+  // Compute the Pedersen commitment for the secret
+  const commitment = await pedersen.hash(secret);
   console.log({ commitment });
 
-  // Get denomination.
+  // Fetch the vault's deposit denomination
   const denomination = await vaultContract.denomination();
   console.log({ denomination: ethers.formatEther(denomination) });
 
-  // Do deposit.
-  const tx = await vaultContract.deposit(toHex(commitment), {
+  // Print balances before the deposit
+  printBalances("Before deposit", provider, {
+    depositWallet: depositWallet.address,
+    vaultContract: await vaultContract.getAddress(),
+  });
+
+  // Perform the deposit transaction
+  const tx = await vaultContract.deposit(hex.from(commitment), {
     value: denomination,
     gasLimit: 5_000_000,
     maxFeePerGas: ethers.parseUnits("50", "gwei"),
@@ -86,17 +121,29 @@ async function deposit() {
   const receipt = await tx.wait();
   console.log({ receipt });
 
-  // Check balance of wallet and contract after.
-  console.log({
-    depositWalletBlanceAfter: await provider.getBalance(depositWallet.address),
-    vaultContractBlanceAfter: await provider.getBalance(
-      await vaultContract.getAddress()
-    ),
+  // Print balances after the deposit
+  printBalances("After deposit", provider, {
+    depositWallet: depositWallet.address,
+    vaultContract: await vaultContract.getAddress(),
   });
+
+  console.log(
+    `Depost successful with: ${JSON.stringify(
+      { secret: secret.toString(), commitment: commitment.toString() },
+      null,
+      2
+    )}`
+  );
 
   process.exit(0);
 }
 
+/**
+ * Executes the withdrawal operation from the zkVault contract.
+ * Requires a valid secret from a previous deposit. Proves knowledge
+ * of the secret via zkSNARK and transfers funds to the recipient.
+ * @param secret The original deposit secret (bigint).
+ */
 async function withdraw(secret: bigint) {
   console.log({ secret });
 
@@ -116,24 +163,11 @@ async function withdraw(secret: bigint) {
     withdrawWallet
   );
 
-  // Check balance of wallet and contract before.
-  console.log({
-    depositWalletBlanceBefore: await provider.getBalance(
-      withdrawWallet.address
-    ),
-    recipientWalletBlanceBefore: await provider.getBalance(
-      recipientWallet.address
-    ),
-    vaultContractBlanceBefore: await provider.getBalance(
-      await vaultContract.getAddress()
-    ),
-  });
-
-  // Calculate commitment.
-  const commitment = await pedersenHash(secret);
+  // Recompute the commitment from the given secret
+  const commitment = await pedersen.hash(secret);
   console.log({ commitment });
 
-  // Calculate proof.
+  // Generate the zero-knowledge proof for the withdrawal
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(
     {
       // Public inputs
@@ -147,7 +181,14 @@ async function withdraw(secret: bigint) {
     path.join(__dirname, "../circuits/build/ZkVaultBasic.zkey")
   );
 
-  // Do withdraw.
+  // Print balances before the withdrawal
+  printBalances("Before withdraw", provider, {
+    withdrawWallet: withdrawWallet.address,
+    recipientWallet: recipientWallet.address,
+    vaultContract: await vaultContract.getAddress(),
+  });
+
+  // Perform the withdrawal using the generated zk proof
   const tx = await vaultContract.withdraw(
     [BigInt(proof.pi_a[0]), BigInt(proof.pi_a[1])],
     [
@@ -166,20 +207,28 @@ async function withdraw(secret: bigint) {
   const receipt = await tx.wait();
   console.log({ receipt });
 
-  // Check balance of wallet and contract after.
-  console.log({
-    depositWalletBlanceAfter: await provider.getBalance(withdrawWallet.address),
-    recipientWalletBlanceAfter: await provider.getBalance(
-      recipientWallet.address
-    ),
-    vaultContractBlanceAfter: await provider.getBalance(
-      await vaultContract.getAddress()
-    ),
+  // Print balances after the withdrawal
+  printBalances("After withdraw", provider, {
+    withdrawWallet: withdrawWallet.address,
+    recipientWallet: recipientWallet.address,
+    vaultContract: await vaultContract.getAddress(),
   });
+
+  console.log(
+    `Withdraw successful with: ${JSON.stringify(
+      { secret: secret.toString(), commitment: commitment.toString() },
+      null,
+      2
+    )}`
+  );
 
   process.exit(0);
 }
 
+/**
+ * Entry point using Commander to parse options.
+ * Supports `deposit` and `withdraw` commands.
+ */
 async function main() {
   program.description("zkvault-basic CLI");
 

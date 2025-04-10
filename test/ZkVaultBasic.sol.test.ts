@@ -4,8 +4,8 @@ import { Signer } from "ethers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { ZkVaultBasic } from "../typechain-types";
 import * as snarkjs from "snarkjs";
-import { to as toHex } from "../utils/hex";
-import { hash as pedersenHash } from "../utils/pedersen";
+import * as hex from "../utils/hex";
+import * as pedersen from "../utils/pedersen";
 
 describe("ZkVaultBasic contract", function () {
   const _denomination = ethers.parseEther("0.1");
@@ -16,8 +16,8 @@ describe("ZkVaultBasic contract", function () {
 
   async function deposit(commitment: bigint, value: bigint = 0n) {
     return value
-      ? _vaultContract.deposit(toHex(commitment), { value })
-      : _vaultContract.deposit(toHex(commitment));
+      ? _vaultContract.deposit(hex.from(commitment), { value })
+      : _vaultContract.deposit(hex.from(commitment));
   }
 
   async function withdraw(
@@ -76,18 +76,18 @@ describe("ZkVaultBasic contract", function () {
   });
 
   describe("deploy", function () {
-    it("Should deploy successfully.", async function () {
+    it("should correctly deploy.", async function () {
       expect(await _vaultContract.getAddress()).to.be.properAddress;
     });
 
-    it("Should set the right denomination.", async function () {
+    it("should correctly set the denomination.", async function () {
       const denomination = await _vaultContract.denomination();
       expect(denomination).to.equal(_denomination);
     });
   });
 
   describe("receive", function () {
-    it("Should revert if the contract received ETH.", async function () {
+    it("should revert if the contract received ETH.", async function () {
       await expect(
         _ownerAccount.sendTransaction({
           to: await _vaultContract.getAddress(),
@@ -98,21 +98,21 @@ describe("ZkVaultBasic contract", function () {
   });
 
   describe("deposit", function () {
-    it("Should revert if msg.value lost.", async function () {
+    it("should revert if msg.value lost.", async function () {
       const commitment = 1234n;
       await expect(deposit(commitment)).to.revertedWith(
         "Invalid deposit amount"
       );
     });
 
-    it("Should revert if msg.value != denomination.", async function () {
+    it("should revert if msg.value != denomination.", async function () {
       const commitment = 1234n;
       await expect(deposit(commitment, _denomination + 1n)).to.revertedWith(
         "Invalid deposit amount"
       );
     });
 
-    it("Should revert if commitment already used.", async function () {
+    it("should revert if commitment already used.", async function () {
       const commitment = 1234n;
       await deposit(commitment, _denomination);
       await expect(deposit(commitment, _denomination)).to.revertedWith(
@@ -120,14 +120,14 @@ describe("ZkVaultBasic contract", function () {
       );
     });
 
-    it("Should emit an event on deposit.", async function () {
+    it("should correctly emit an event on deposit.", async function () {
       const commitment = 1234n;
       await expect(deposit(commitment, _denomination))
         .to.emit(_vaultContract, "Deposit")
         .withArgs(commitment, anyValue);
     });
 
-    it("Should deposit the correct denomination to contract.", async function () {
+    it("should correctly deposit the correct denomination to contract.", async function () {
       const commitment = 1234n;
 
       const vaultContractBalnceBefore =
@@ -159,46 +159,46 @@ describe("ZkVaultBasic contract", function () {
   });
 
   describe("withdraw", function () {
-    it("Should revert if commitment already spent.", async function () {
+    it("should revert if commitment already spent.", async function () {
       const secret = 1234n;
       const recipient = 5678n;
-      const commitment = await pedersenHash(secret);
+      const commitment = await pedersen.hash(secret);
 
       await expect(withdraw(commitment, recipient, secret)).to.revertedWith(
         "Commitment already spent"
       );
     });
 
-    it("Should emit an event on withdraw.", async function () {
+    it("should correctly emit an event on withdraw.", async function () {
       const secret = 1234n;
       const recipient = 5678n;
-      const commitment = await pedersenHash(secret);
+      const commitment = await pedersen.hash(secret);
 
       await deposit(commitment, _denomination);
 
       await expect(withdraw(commitment, recipient, secret))
         .to.emit(_vaultContract, "Withdraw")
-        .withArgs(toHex(commitment), toHex(recipient, 20), anyValue);
+        .withArgs(hex.from(commitment), hex.from(recipient, 20), anyValue);
     });
 
-    it("Should emit an event on withdraw event if the caller is not the owner.", async function () {
+    it("should correctly emit an event on withdraw event if the caller is not the owner.", async function () {
       const secret = 1234n;
       const recipient = 5678n;
-      const commitment = await pedersenHash(secret);
+      const commitment = await pedersen.hash(secret);
 
       await _vaultContract
         .connect(_guestAccount)
-        .deposit(toHex(commitment), { value: _denomination });
+        .deposit(hex.from(commitment), { value: _denomination });
 
       await expect(withdraw(commitment, recipient, secret))
         .to.emit(_vaultContract, "Withdraw")
-        .withArgs(toHex(commitment), toHex(recipient, 20), anyValue);
+        .withArgs(hex.from(commitment), hex.from(recipient, 20), anyValue);
     });
 
-    it("Should withdraw the correct denomination from contract.", async function () {
+    it("should correctly withdraw the correct denomination from contract.", async function () {
       const secret = 1234n;
       const recipient = 5678n;
-      const commitment = await pedersenHash(secret);
+      const commitment = await pedersen.hash(secret);
 
       await deposit(commitment, _denomination);
 
@@ -207,7 +207,7 @@ describe("ZkVaultBasic contract", function () {
           await _vaultContract.getAddress()
         );
       const recipientBalnceBefore = await _ownerAccount.provider!.getBalance(
-        toHex(recipient, 20)
+        hex.from(recipient, 20)
       );
 
       await withdraw(commitment, recipient, secret);
@@ -216,7 +216,7 @@ describe("ZkVaultBasic contract", function () {
         await _vaultContract.getAddress()
       );
       const recipientBalnceAfter = await _ownerAccount.provider!.getBalance(
-        toHex(recipient, 20)
+        hex.from(recipient, 20)
       );
 
       expect(vaultContractBalnceBefore - vaultContractBalnceAfter).to.equal(

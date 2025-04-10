@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { wasm, WasmTester } from "circom_tester";
-import { hash as pedersenHash } from "../utils/pedersen";
+import * as pedersen from "../utils/pedersen";
 
 describe("ZkVaultBasic _circuit", () => {
   let _circuit: WasmTester;
@@ -9,10 +9,10 @@ describe("ZkVaultBasic _circuit", () => {
     _circuit = await wasm("./circuits/ZkVaultBasic.circom");
   });
 
-  it("Should output consistent commitment and recipient.", async () => {
+  it("should correctly output consistent commitment and recipient.", async () => {
     const secret = 1234n;
     const recipient = 5678n;
-    const commitment = await pedersenHash(secret);
+    const commitment = await pedersen.hash(secret);
 
     const witness = await _circuit.calculateWitness(
       { commitment, recipient, secret },
@@ -30,14 +30,14 @@ describe("ZkVaultBasic _circuit", () => {
     await _circuit.assertOut(witness, { recipientOut: recipient });
   });
 
-  it("Should throw error if recipient = 0n.", async () => {
+  it("should throw error if recipient = 0n.", async () => {
     const secret = 1234n;
     const recipient = 0n;
-    const commitment = await pedersenHash(secret);
+    const commitment = await pedersen.hash(secret);
 
     // try {
     //   await _circuit.calculateWitness({ commitment, recipient, secret }, true);
-    //   expect.fail("Should have caught an error on recipient == 0");
+    //   expect.fail("should have caught an error on recipient == 0");
     // } catch (err) {
     //   if (err instanceof Error) {
     //     expect(err.message).to.include("Assert Failed");
@@ -60,17 +60,17 @@ describe("ZkVaultBasic _circuit", () => {
     ).to.be.rejectedWith(Error, /Assert Failed/);
   });
 
-  it("Should throw error if secret = 0n.", async () => {
+  it("should throw error if secret = 0n.", async () => {
     const secret = 0n;
     const recipient = 5678n;
-    const commitment = await pedersenHash(secret);
+    const commitment = await pedersen.hash(secret);
 
     await expect(
       _circuit.calculateWitness({ commitment, recipient, secret }, true)
     ).to.be.rejectedWith(Error, /Assert Failed/);
   });
 
-  it("Should throw error if commitment is incorrect.", async () => {
+  it("should throw error if commitment is incorrect.", async () => {
     const secret = 1234n;
     const recipient = 5678n;
     const commitment = 0xabcdn;
