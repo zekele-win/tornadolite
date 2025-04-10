@@ -105,7 +105,7 @@ async function deposit() {
   console.log({ denomination: ethers.formatEther(denomination) });
 
   // Print balances before the deposit
-  printBalances("Before deposit", provider, {
+  await printBalances("Before deposit", provider, {
     depositWallet: depositWallet.address,
     vaultContract: await vaultContract.getAddress(),
   });
@@ -122,7 +122,7 @@ async function deposit() {
   console.log({ receipt });
 
   // Print balances after the deposit
-  printBalances("After deposit", provider, {
+  await printBalances("After deposit", provider, {
     depositWallet: depositWallet.address,
     vaultContract: await vaultContract.getAddress(),
   });
@@ -182,7 +182,7 @@ async function withdraw(secret: bigint) {
   );
 
   // Print balances before the withdrawal
-  printBalances("Before withdraw", provider, {
+  await printBalances("Before withdraw", provider, {
     withdrawWallet: withdrawWallet.address,
     recipientWallet: recipientWallet.address,
     vaultContract: await vaultContract.getAddress(),
@@ -208,7 +208,7 @@ async function withdraw(secret: bigint) {
   console.log({ receipt });
 
   // Print balances after the withdrawal
-  printBalances("After withdraw", provider, {
+  await printBalances("After withdraw", provider, {
     withdrawWallet: withdrawWallet.address,
     recipientWallet: recipientWallet.address,
     vaultContract: await vaultContract.getAddress(),
