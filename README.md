@@ -122,7 +122,7 @@ npm run test
 Default endpoint: `http://127.0.0.1:8545`:
 
 ```bash
-npm run dev
+npm run srv
 ```
 
 ---

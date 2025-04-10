@@ -120,7 +120,7 @@ npm run test
 默认地址为 `http://127.0.0.1:8545`：
 
 ```bash
-npm run dev
+npm run srv
 ```
 
 ---
