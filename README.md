@@ -40,13 +40,35 @@ This project is a simplified version of Tornado Cash’s basic mechanism—an id
 
 ```bash
 .
-├── circuits/          # Circom circuit code and build artifacts
-├── contracts/         # Solidity smart contracts: Vault + Verifier
-├── scripts/           # CLI scripts for deposit and withdrawal operations
-├── test/              # Unit tests for circuits and contracts
-├── types/             # TypeScript module definitions
-├── utils/             # General TypeScript utilities
-└── README.md          # Project documentation (this file)
+├── circuits/                          # Circom ZK circuits
+│   └── ZkVaultBasic.circom            # Main circuit implementing deposit/withdraw logic
+│
+├── contracts/                         # Solidity smart contracts
+│   ├── ZkVaultBasic.sol               # ZK-enabled Vault contract
+│   └── ZkVaultBasicVerifier.sol       # Auto-generated Groth16 verifier contract
+│
+├── scripts/                           # CLI and deployment scripts
+│   ├── cli.ts                         # Command-line interface for deposit/withdraw testing
+│   └── deploy.ts                      # Deploys contracts to local or testnet environments
+│
+├── test/                              # Tests for circuits and contracts
+│   ├── utils.hex.test.ts              # Unit tests for hex encoding utilities
+│   ├── utils.pedersen.test.ts         # Unit tests for Pedersen hash implementation
+│   ├── ZkVaultBasic.circom.test.ts    # Tests for circuit correctness and witness verification
+│   └── ZkVaultBasic.sol.test.ts       # Tests for smart contract behavior and proof validation
+│
+├── types/                             # Type declarations for external JS/TS libraries
+│   ├── circom_tester.d.ts             # Types for circom_tester (circuit tester wrapper)
+│   └── ffjavascript.d.ts              # Types for ffjavascript (bigint/buffer utils)
+│
+├── utils/                             # Utility modules used across scripts and tests
+│   ├── hex.ts                         # Hex encoding/decoding helpers
+│   └── pedersen.ts                    # Pedersen hash implementation (compatible with circom)
+│
+├── .mocharc.json                      # Mocha testing framework configuration
+├── hardhat.config.ts                  # Hardhat config for smart contract compilation/deployment
+├── package.json                       # Project dependencies and scripts
+└── tsconfig.json                      # TypeScript configuration
 ```
 
 ---

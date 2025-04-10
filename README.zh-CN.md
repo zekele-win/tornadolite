@@ -38,13 +38,35 @@ zkvault-basic 的设计初衷是作为学习与分享的工具，复现匿名存
 
 ```bash
 .
-├── circuits/          # Circom 电路代码及构建产物
-├── contracts/         # Solidity 智能合约：Vault + Verifier
-├── scripts/           # CLI 脚本：执行 deposit 与 withdraw 操作
-├── test/              # 电路和合约的单元测试
-├── types/             # Typescript 需要的 module 定义文件
-├── utils/             # 通用 Typescript 代码
-└── README.md          # 当前项目说明文档
+├── circuits/                          # Circom 零知识电路
+│   └── ZkVaultBasic.circom            # 主电路，包含存取款逻辑
+│
+├── contracts/                         # Solidity 智能合约
+│   ├── ZkVaultBasic.sol               # 主 Vault 合约，调用 verifier 验证 ZK 证明
+│   └── ZkVaultBasicVerifier.sol       # Circom 编译后自动生成的 Groth16 验证器合约
+│
+├── scripts/                           # 脚本，包括 CLI 和合约部署
+│   ├── cli.ts                         # 提供命令行交互功能（如 deposit/withdraw 测试）
+│   └── deploy.ts                      # 用于部署合约到本地链或测试网
+│
+├── test/                              # 单元测试（电路 + 合约 + 工具函数）
+│   ├── utils.hex.test.ts              # 测试 hex 编解码工具
+│   ├── utils.pedersen.test.ts         # 测试 Pedersen 哈希函数
+│   ├── ZkVaultBasic.circom.test.ts    # 测试 Circom 电路逻辑与 Witness 输出
+│   └── ZkVaultBasic.sol.test.ts       # 测试 Solidity 合约行为与 ZK 验证集成
+│
+├── types/                             # TypeScript 类型定义文件
+│   ├── circom_tester.d.ts             # circom_tester 模块的类型声明
+│   └── ffjavascript.d.ts              # ffjavascript 工具库的类型声明
+│
+├── utils/                             # 工具函数模块
+│   ├── hex.ts                         # hex 编解码相关函数
+│   └── pedersen.ts                    # Pedersen 哈希函数（与电路保持兼容）
+│
+├── .mocharc.json                      # Mocha 测试框架配置
+├── hardhat.config.ts                  # Hardhat 编译与部署配置
+├── package.json                       # 项目依赖与 NPM 脚本定义
+└── tsconfig.json                      # TypeScript 配置文件
 ```
 
 ---
