@@ -1,7 +1,4 @@
-<h1 align="center">zkvault-basic</h1>
-<p align="center">
-  <img src="https://komarev.com/ghpvc/?username=zekele-win&color=blueviolet&style=flat-square" alt="Visitor Count" />
-</p>
+# ❄️ zkvault-basic
 
 zkvault-basic 是一个基于 zkSNARK 的最小可用零知识证明项目，旨在帮助开发者深入了解 zk 应用的基本工作流程，包括电路编写、proof 生成与合约验证等关键环节。
 

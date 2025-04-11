@@ -1,9 +1,6 @@
 👉 [简体中文](./README.zh-CN.md)
 
-<h1 align="center">zkvault-basic</h1>
-<p align="center">
-  <img src="https://komarev.com/ghpvc/?username=zekele-win&color=blueviolet&style=flat-square" alt="Visitor Count" />
-</p>
+# ❄️ zkvault-basic
 
 **zkvault-basic** is a minimal, functional zero-knowledge proof project based on zkSNARKs, designed to help developers understand the fundamental workflow of zk applications—including circuit writing, proof generation, and smart contract verification.
 
