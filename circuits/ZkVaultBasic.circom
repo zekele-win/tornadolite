@@ -29,8 +29,9 @@ template CommitmentHasher() {
 template Withdraw() {
     // Public input: Pedersen hash of the secret
     signal input commitment;
-    // Private input: recipient address
+    // Public input: recipient address
     signal input recipient;
+
     // Private input: user's secret
     signal input secret;
 
